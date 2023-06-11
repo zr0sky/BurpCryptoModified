@@ -18,7 +18,7 @@ public class PBKDF2UIHandler {
     private JComboBox<String> saltFormatSelector;
     private JComboBox<String> outFormatSelector;
     private JTextField keyLengthText, iterationCountText, saltText;
-    private JButton applyBtn, deleteBtn;
+    private JButton applyBtn, testBtn, deleteBtn;
 
     public PBKDF2UIHandler(BurpExtender parent) {
         this.parent = parent;
@@ -118,6 +118,51 @@ public class PBKDF2UIHandler {
                 JOptionPane.showMessageDialog(mainPanel, "Apply processor success!");
         });
 
+        testBtn = new JButton("Test processor");
+        testBtn.setMaximumSize(testBtn.getPreferredSize());
+        testBtn.addActionListener(e -> {
+            PBKDF2Config config = new PBKDF2Config();
+            KeyFormat saltFormat = KeyFormat.valueOf(saltFormatSelector.getSelectedItem().toString());
+            config.Algorithms = PBKDF2Algorithms.valueOf(algSelector.getSelectedItem().toString());
+            config.OutFormat = OutFormat.valueOf(outFormatSelector.getSelectedItem().toString());
+            try {
+                config.KeyLength = Integer.valueOf(keyLengthText.getText());
+            } catch (Exception ex) {
+                System.out.println(ex);
+                JOptionPane.showMessageDialog(mainPanel, "KeyLength format error!");
+                return;
+            }
+            try {
+                config.IterationCount = Integer.valueOf(iterationCountText.getText());
+            } catch (Exception ex) {
+                System.out.println(ex);
+                JOptionPane.showMessageDialog(mainPanel, "IterationCount format error!");
+                return;
+            }
+            try {
+                String salt = saltText.getText();
+                if (!"".equals(salt) && salt != null) {
+                    config.Salt = Utils.StringKeyToByteKey(saltText.getText(), saltFormat);
+                } else {
+                    JOptionPane.showMessageDialog(mainPanel, "Salt must be non-null!");
+                    return;
+                }
+            } catch (Exception ex) {
+                System.out.println(ex);
+                JOptionPane.showMessageDialog(mainPanel, "Salt format error!");
+                return;
+            }
+            String testStr = JOptionPane.showInputDialog("Please give test string:");
+            if (testStr != null) {
+                if (testStr.length() == 0) {
+                    JOptionPane.showMessageDialog(mainPanel, "test string empty!");
+                    return;
+                }
+            } else return;
+            byte[] processPayload = new PBKDF2IntruderPayloadProcessor(parent, testStr, config).processPayload(testStr.getBytes(), testStr.getBytes(), testStr.getBytes());
+            JOptionPane.showMessageDialog(mainPanel, processPayload.toString());
+        });
+
         deleteBtn = new JButton("Remove processor");
         deleteBtn.setMaximumSize(deleteBtn.getPreferredSize());
         deleteBtn.addActionListener(e -> {
@@ -143,6 +188,7 @@ public class PBKDF2UIHandler {
         panel4.add(label5);
         panel4.add(outFormatSelector);
         panel5.add(applyBtn);
+        panel5.add(testBtn);
         panel5.add(deleteBtn);
 
         mainPanel.add(label1);

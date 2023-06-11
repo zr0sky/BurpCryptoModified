@@ -31,7 +31,7 @@ public class JsUIHandler {
     private JTextArea jsCodeText;
     private JScrollPane codePane;
     private JComboBox<String> jsEngineSelector;
-    private JButton applyBtn, deleteBtn, includeLibBtn;
+    private JButton applyBtn, testBtn,deleteBtn, includeLibBtn;
     private JCheckBox useSyntaxEditor;
     private HashMap<String, String> includes = new HashMap<>();
 
@@ -102,6 +102,28 @@ public class JsUIHandler {
                 JOptionPane.showMessageDialog(mainPanel, "Apply processor success!");
         });
 
+
+        testBtn = new JButton("Test processor");
+        testBtn.setMaximumSize(testBtn.getPreferredSize());
+        testBtn.addActionListener(e -> {
+            JsEngines jsEngine = JsEngines.valueOf(jsEngineSelector.getSelectedItem().toString());
+            JsConfig config = new JsConfig();
+            config.JsEngine = jsEngine;
+            config.CryptoJsCode = "";
+            for (Map.Entry<String, String> snippet : includes.entrySet()) {
+                config.CryptoJsCode += snippet.getValue() + "\r\n";
+            }
+            config.CryptoJsCode += jsCodeText.getText();
+            config.MethodName = methodText.getText();
+            String testStr = JOptionPane.showInputDialog("Please give this processor a special name:");
+            if (testStr.length() == 0) {
+                JOptionPane.showMessageDialog(mainPanel, "name empty!");
+                return;
+            }
+            byte[] processPayload = new ExecJSIntruderPayloadProcessor(parent, testStr, config).processPayload(testStr.getBytes(), testStr.getBytes(), testStr.getBytes());
+            JOptionPane.showMessageDialog(mainPanel, processPayload.toString());
+        });
+
         deleteBtn = new JButton("Remove processor");
         deleteBtn.setMaximumSize(deleteBtn.getPreferredSize());
         deleteBtn.addActionListener(e -> {
@@ -132,6 +154,7 @@ public class JsUIHandler {
         panel1.add(label4);
         panel1.add(jsEngineSelector);
         panel2.add(applyBtn);
+        panel2.add(testBtn);
         panel2.add(deleteBtn);
 
         mainPanel.add(label1);

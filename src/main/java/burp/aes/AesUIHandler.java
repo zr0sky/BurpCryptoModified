@@ -18,7 +18,7 @@ public class AesUIHandler {
     private JComboBox<String> aesOutFormatSelector;
     private JTextField aesKeyText;
     private JTextField aesIVText;
-    private JButton applyBtn, deleteBtn;
+    private JButton applyBtn, testBtn,deleteBtn;
 
     public AesUIHandler(BurpExtender parent) {
         this.parent = parent;
@@ -112,6 +112,42 @@ public class AesUIHandler {
             if (parent.RegIPProcessor(extName, new AesIntruderPayloadProcessor(parent, extName, aesConfig)))
                 JOptionPane.showMessageDialog(mainPanel, "Apply processor success!");
         });
+        testBtn = new JButton("Test processor");
+        testBtn.setMaximumSize(testBtn.getPreferredSize());
+        testBtn.addActionListener(e -> {
+            AesAlgorithms alg = AesAlgorithms.valueOf(aesAlgSelector.getSelectedItem().toString().replace('/', '_'));
+            KeyFormat keyFormat = KeyFormat.valueOf(aesKeyFormatSelector.getSelectedItem().toString());
+            KeyFormat ivFormat = KeyFormat.valueOf(aesIVFormatSelector.getSelectedItem().toString());
+            OutFormat outFormat = OutFormat.valueOf(aesOutFormatSelector.getSelectedItem().toString());
+            AesConfig aesConfig = new AesConfig();
+            CipherInfo cipherInfo = new CipherInfo(aesAlgSelector.getSelectedItem().toString());
+            aesConfig.Algorithms = alg;
+            aesConfig.OutFormat = outFormat;
+            try {
+                aesConfig.Key = Utils.StringKeyToByteKey(aesKeyText.getText(), keyFormat);
+            } catch (Exception ex) {
+                System.out.println(ex);
+                JOptionPane.showMessageDialog(mainPanel, "Key format error!");
+                return;
+            }
+            if (!cipherInfo.Mode.equals("ECB"))
+                try {
+                    aesConfig.IV = Utils.StringKeyToByteKey(aesIVText.getText(), ivFormat);
+                } catch (Exception ex) {
+                    System.out.println(ex);
+                    JOptionPane.showMessageDialog(mainPanel, "IV format error!");
+                    return;
+                }
+            String testStr = JOptionPane.showInputDialog("Please give this test string:");
+            if (testStr != null) {
+                if (testStr.length() == 0) {
+                    JOptionPane.showMessageDialog(mainPanel, "test string empty!");
+                    return;
+                }
+            } else return;
+            byte[] processPayload = (new AesIntruderPayloadProcessor(parent, testStr, aesConfig)).processPayload(testStr.getBytes(), testStr.getBytes(), testStr.getBytes());
+            JOptionPane.showMessageDialog(mainPanel, processPayload.toString());
+        });
 
         deleteBtn = new JButton("Remove processor");
         deleteBtn.setMaximumSize(deleteBtn.getPreferredSize());
@@ -138,6 +174,7 @@ public class AesUIHandler {
         panel4.add(label5);
         panel4.add(aesOutFormatSelector);
         panel5.add(applyBtn);
+        panel5.add(testBtn);
         panel5.add(deleteBtn);
 
         mainPanel.add(label1);

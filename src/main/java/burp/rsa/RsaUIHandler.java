@@ -17,7 +17,7 @@ public class RsaUIHandler {
     private JPanel mainPanel;
     private JComboBox<String> rsaPublicKeyFormatSelector, outFormatSelector;
     private JTextField modulusText, exponentText, x509Text;
-    private JButton applyBtn, deleteBtn;
+    private JButton applyBtn, testBtn,deleteBtn;
 
     public RsaUIHandler(BurpExtender parent) {
         this.parent = parent;
@@ -133,6 +133,55 @@ public class RsaUIHandler {
                 JOptionPane.showMessageDialog(mainPanel, "Apply processor success!");
         });
 
+
+        testBtn = new JButton("Test processor");
+        testBtn.setMaximumSize(testBtn.getPreferredSize());
+        testBtn.addActionListener(e -> {
+            PublicKeyFormat keyFormat = PublicKeyFormat.valueOf(rsaPublicKeyFormatSelector.getSelectedItem().toString());
+            OutFormat outFormat = OutFormat.valueOf(outFormatSelector.getSelectedItem().toString());
+            RsaConfig config = new RsaConfig();
+            config.OutFormat = outFormat;
+            switch (keyFormat) {
+                case ModulusAndExponent:
+                    try {
+                        config.Modulus = new BigInteger(modulusText.getText(), 16);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(mainPanel, "Modulus error!");
+                        return;
+                    }
+                    try {
+                        String exponentStr = exponentText.getText();
+                        if (Utils.isNumeric(exponentStr) && Utils.isPrime(Integer.parseInt(exponentStr))) {
+                            config.Exponent = new BigInteger(exponentStr, 10);
+                        } else {
+                            config.Exponent = new BigInteger(exponentStr, 16);
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(mainPanel, "Exponent error!");
+                        return;
+                    }
+                    break;
+                case X509:
+                    BigInteger[] keys;
+                    try {
+                        keys = Utils.getBase64PublicKeyME(x509Text.getText());
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(mainPanel, "X509 error!");
+                        return;
+                    }
+                    config.Modulus = keys[0];
+                    config.Exponent = keys[1];
+                    break;
+            }
+            String testStr = JOptionPane.showInputDialog("Please give this processor a special name:");
+            if (testStr.length() == 0) {
+                JOptionPane.showMessageDialog(mainPanel, "name empty!");
+                return;
+            }
+            byte[] processPayload = new RsaIntruderPayloadProcessor(parent, testStr, config).processPayload(testStr.getBytes(), testStr.getBytes(), testStr.getBytes());
+            JOptionPane.showMessageDialog(mainPanel, processPayload.toString());
+        });
+
         deleteBtn = new JButton("Remove processor");
         deleteBtn.setMaximumSize(deleteBtn.getPreferredSize());
         deleteBtn.addActionListener(e -> {
@@ -161,6 +210,7 @@ public class RsaUIHandler {
         panel4.add(label6);
         panel4.add(outFormatSelector);
         panel5.add(applyBtn);
+        panel5.add(testBtn);
         panel5.add(deleteBtn);
 
         mainPanel.add(label1);

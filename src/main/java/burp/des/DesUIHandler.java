@@ -21,7 +21,7 @@ public class DesUIHandler {
     private JTextField desEncKey1Text;
     private JTextField desEncKey2Text;
     private JTextField desEncKey3Text;
-    private JButton applyBtn, deleteBtn;
+    private JButton applyBtn, testBtn, deleteBtn;
 
     public DesUIHandler(BurpExtender parent) {
         this.parent = parent;
@@ -161,6 +161,60 @@ public class DesUIHandler {
                 JOptionPane.showMessageDialog(mainPanel, "Apply processor success!");
         });
 
+
+        testBtn = new JButton("Test processor");
+        testBtn.setMaximumSize(testBtn.getPreferredSize());
+        testBtn.addActionListener(e -> {
+            DesAlgorithms alg = DesAlgorithms.valueOf(desAlgSelector.getSelectedItem().toString().replace('/', '_'));
+            KeyFormat keyFormat = KeyFormat.valueOf(desKeyFormatSelector.getSelectedItem().toString());
+            KeyFormat ivFormat = KeyFormat.valueOf(desIVFormatSelector.getSelectedItem().toString());
+            OutFormat outFormat = OutFormat.valueOf(desOutFormatSelector.getSelectedItem().toString());
+            DesConfig desConfig = new DesConfig();
+            desConfig.Algorithms = alg;
+            desConfig.OutFormat = outFormat;
+            if (alg == DesAlgorithms.strEnc) {
+                desConfig.Key1 = desEncKey1Text.getText();
+                if (desConfig.Key1 == null) desConfig.Key1 = "";
+                desConfig.Key2 = desEncKey2Text.getText();
+                if (desConfig.Key2 == null) desConfig.Key2 = "";
+                desConfig.Key3 = desEncKey3Text.getText();
+                if (desConfig.Key3 == null) desConfig.Key3 = "";
+            } else {
+                CipherInfo cipherInfo = new CipherInfo(desAlgSelector.getSelectedItem().toString());
+                try {
+                    desConfig.Key = Utils.StringKeyToByteKey(desKeyText.getText(), keyFormat);
+                } catch (Exception ex) {
+                    System.out.println(ex);
+                    JOptionPane.showMessageDialog(mainPanel, "Key format error!");
+                    return;
+                }
+                if (!cipherInfo.Mode.equals("ECB"))
+                    try {
+                        desConfig.IV = Utils.StringKeyToByteKey(desIVText.getText(), ivFormat);
+                    } catch (Exception ex) {
+                        System.out.println(ex);
+                        JOptionPane.showMessageDialog(mainPanel, "IV format error!");
+                        return;
+                    }
+            }
+            try {
+                new DesIntruderPayloadProcessor(parent, "Test", desConfig);
+            } catch(Exception ex) {
+                System.out.println(ex);
+                JOptionPane.showMessageDialog(mainPanel, "key spec error!");
+                return;
+            }
+            String testStr = JOptionPane.showInputDialog("Please give this test string:");
+            if (testStr != null) {
+                if (testStr.length() == 0) {
+                    JOptionPane.showMessageDialog(mainPanel, "test string empty!");
+                    return;
+                }
+            } else return;
+            byte[] processPayload = new DesIntruderPayloadProcessor(parent, testStr, desConfig).processPayload(testStr.getBytes(),testStr.getBytes(),testStr.getBytes());
+            JOptionPane.showMessageDialog(mainPanel, processPayload.toString());
+        });
+
         deleteBtn = new JButton("Remove processor");
         deleteBtn.setMaximumSize(deleteBtn.getPreferredSize());
         deleteBtn.addActionListener(e -> {
@@ -191,6 +245,7 @@ public class DesUIHandler {
         panel7.add(label8);
         panel7.add(desOutFormatSelector);
         panel8.add(applyBtn);
+        panel8.add(testBtn);
         panel8.add(deleteBtn);
 
         panel4.setVisible(false);
